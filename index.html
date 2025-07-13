@@ -3,354 +3,306 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Plan of Salvation</title>
+    <title>Plan of Salvation Matching Game</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:wght@400;600;700&family=Lora:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="manifest" href="manifest.json">
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/service-worker.js').then(registration => {
-                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
-                }, err => {
-                    console.log('ServiceWorker registration failed: ', err);
-                });
-            });
-        }
-    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         body {
-            font-family: 'Lora', serif;
-            background-color: #f0f4f8;
+            font-family: 'Inter', sans-serif;
+            touch-action: none; /* Prevents scrolling on touch devices when dragging */
         }
-        .title-font {
-            font-family: 'Crimson Text', serif;
+        .drop-zone {
+            transition: background-color 0.3s ease, transform 0.2s ease;
         }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(15px); }
-            to { opacity: 1; transform: translateY(0); }
+        .drop-zone.drag-over {
+            background-color: #cceeff;
+            transform: scale(1.05);
+            border: 2px dashed #007bff;
         }
-
-        .stage-card { display: none; }
-        .stage-card.active {
-            display: block;
-            animation: fadeIn 0.5s ease-out forwards;
+        .draggable-item {
+            cursor: grab;
+            transition: transform 0.2s ease, opacity 0.2s ease;
         }
-
-        /* --- Snaking Timeline Styles --- */
-        .path-container {
-            position: relative;
-            width: 100%;
-            height: 180px;
+        .draggable-item.dragging {
+            opacity: 0.5;
+            transform: scale(0.9);
+            cursor: grabbing;
         }
-        .path-segment {
-            position: absolute;
-            background-color: #cbd5e1;
-            z-index: 1;
+        .item-placed {
+            cursor: default;
+            opacity: 1 !important;
         }
-        .stage-point, .stage-label {
-            cursor: pointer; /* Add pointer cursor for clickable elements */
+        .shake {
+            animation: shake 0.5s;
         }
-        .stage-point {
-            position: absolute;
-            transform: translate(-50%, -50%);
-            width: 16px;
-            height: 16px;
-            background-color: #94a3b8;
-            border-radius: 50%;
-            z-index: 3;
-            transition: all 0.5s ease-in-out;
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
         }
-        .stage-point.active {
-            background-color: #38bdf8;
-            transform: translate(-50%, -50%) scale(1.5);
-            box-shadow: 0 0 15px rgba(56, 189, 248, 0.7);
+        .correct-drop {
+            background-color: #d4edda !important;
+            border-color: #28a745 !important;
         }
-        .stage-point.pos-down { top: 120px; }
-        .stage-point.pos-up { top: 60px; }
-
-        .stage-label {
-            position: absolute;
-            transform: translateX(-50%);
-            font-size: 0.7rem;
-            color: #475569;
-            text-align: center;
-            width: 80px;
-            line-height: 1.2;
-            z-index: 2;
-        }
-        .stage-label.pos-down { top: 140px; }
-        .stage-label.pos-up { top: 20px; }
-
-        #person-icon {
-            position: absolute;
-            transform: translate(-50%, -50%);
-            width: 40px;
-            height: 40px;
-            z-index: 4;
-            transition: all 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55);
-            color: #0f172a;
-        }
-        #person-icon.pos-down { top: 120px; }
-        #person-icon.pos-up { top: 60px; }
-        
-        .study-link {
-            @apply text-sky-600 hover:text-sky-800 hover:underline transition-colors;
-        }
-        /* --- Degrees of Glory Styles --- */
-        .degree-circle {
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-            text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
-            flex-shrink: 0;
-        }
-        .celestial {
-            background: radial-gradient(ellipse at center, #ffffff 0%, #f0f9ff 40%, #bae6fd 100%);
-            box-shadow: 0 0 50px 15px #fff, 0 0 80px 30px #7dd3fc, 0 0 120px 50px #0ea5e9;
-        }
-        .terrestrial {
-            background: radial-gradient(ellipse at center, #f0f9ff 0%, #e0f2fe 40%, #7dd3fc 100%);
-            box-shadow: 0 0 35px 12px #e0f2fe, 0 0 60px 25px #38bdf8;
-        }
-        .telestial {
-            background: radial-gradient(ellipse at center, #e0f2fe 0%, #cffafe 40%, #22d3ee 100%);
-            box-shadow: 0 0 20px 8px #cffafe, 0 0 35px 15px #67e8f9;
-        }
-        .outer-darkness-circle {
-            background: #1e293b;
-            box-shadow: 0 0 15px 5px #475569;
+        #win-modal {
+            transition: opacity 0.3s ease, transform 0.3s ease;
         }
     </style>
 </head>
-<body class="bg-slate-100 flex items-center justify-center min-h-screen p-2 sm:p-4">
+<body class="bg-gray-100 text-gray-800 flex flex-col items-center justify-center min-h-screen p-4">
 
-    <main class="w-full max-w-4xl mx-auto bg-white rounded-2xl shadow-2xl p-4 sm:p-6 md:p-10">
-        <header class="text-center mb-4">
-            <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold text-slate-800 title-font">The Plan of Salvation</h1>
-            <p class="text-slate-600 mt-2 text-sm sm:text-base">A Journey of Progression and Hope</p>
-        </header>
+    <div class="w-full max-w-7xl mx-auto">
+        <h1 class="text-3xl md:text-4xl font-bold text-center text-gray-700 mb-2">Heavenly Father's Plan of Salvation</h1>
+        <p class="text-center text-gray-500 mb-6">Drag the icons to their correct places in the diagram.</p>
 
-        <div id="path-container" class="path-container mb-4">
-            <div id="person-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-full h-full">
-                  <path fill-rule="evenodd" d="M7.5 6a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM3.751 20.105a8.25 8.25 0 0 1 16.498 0 .75.75 0 0 1-.437.695A18.683 18.683 0 0 1 12 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 0 1-.437-.695Z" clip-rule="evenodd" />
-                </svg>
+        <!-- Main Diagram Flow -->
+        <div id="diagram-container" class="flex flex-wrap justify-center items-center gap-2 md:gap-0 mb-8">
+            <!-- Stages will be dynamically inserted here by JS -->
+        </div>
+
+        <!-- Draggable Items Area -->
+        <div class="bg-white p-4 rounded-xl shadow-lg w-full max-w-4xl mx-auto">
+            <h2 class="text-xl font-bold text-center mb-4">Stickers</h2>
+            <div id="draggable-items-container" class="flex flex-wrap justify-center items-center gap-4">
+                <!-- Draggable items will be dynamically inserted here by JS -->
             </div>
         </div>
-
-        <div id="info-container" class="relative w-full min-h-[480px] sm:min-h-[450px] cursor-grab active:cursor-grabbing">
-            <!-- Stage Cards will be injected here -->
+        
+        <div class="text-center mt-8">
+            <button id="reset-button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105">
+                Reset Game
+            </button>
         </div>
+    </div>
 
-        <div class="flex justify-between items-center mt-6 pt-6 border-t border-slate-200">
-            <button id="prev-btn" class="bg-slate-200 text-slate-700 font-bold py-2 px-5 sm:px-6 rounded-lg hover:bg-slate-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Previous</button>
-            <span id="step-counter" class="text-xs sm:text-sm text-slate-500 font-medium"></span>
-            <button id="next-btn" class="bg-sky-500 text-white font-bold py-2 px-5 sm:px-6 rounded-lg hover:bg-sky-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
+    <!-- Win Modal -->
+    <div id="win-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transform scale-95">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 text-center max-w-sm w-full transform transition-all">
+            <h2 class="text-3xl font-bold text-green-500 mb-4">Congratulations!</h2>
+            <p class="text-gray-600 mb-6">You've completed the Plan of Salvation diagram!</p>
+            <button id="play-again-button" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-lg shadow-md transition-transform transform hover:scale-105 w-full">
+                Play Again
+            </button>
         </div>
-    </main>
+    </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const stages = [
-                { title: "Pre-Mortal Existence", description: "Before we were born, we lived as spirits with God. In a great Council, He presented His plan for us to progress. We chose to follow it.", christsRole: "Jesus Christ, then Jehovah, was chosen to be our Savior. He volunteered to make the Father's plan possible, allowing us to overcome sin and death.", position: 10, icon: `<svg class="stage-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 11.5l.01 0m-3.51 1.5l.01 0m6.99 0l.01 0"></path></svg>`, study: `<a class='study-link' href='https://www.churchofjesuschrist.org/study/scriptures/pgp/abr/3.22-28' target='_blank'>Abraham 3:22-28</a>, <a class='study-link' href='https://www.churchofjesuschrist.org/study/scriptures/nt/rev/12.7-9' target='_blank'>Revelation 12:7-9</a>` },
-                { title: "The Veil & Birth", description: "We passed through a 'veil,' forgetting our past life to learn to walk by faith. We were born into mortal bodies, a critical step to gain experience.", christsRole: "Under the Father's direction, Christ created the earth. His creative act provided the 'schoolroom' for our mortal probation.", position: 20, icon: `<svg class="stage-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15.5 4H8.5a2 2 0 00-2 2v12a2 2 0 002 2h7a2 2 0 002-2V6a2 2 0 00-2-2zM12 4v16"></path></svg>`, study: `<a class='study-link' href='https://www.churchofjesuschrist.org/study/scriptures/pgp/moses/1.33' target='_blank'>Moses 1:33</a>, <a class='study-link' href='https://www.churchofjesuschrist.org/study/general-conference/2002/10/the-challenge-to-become' target='_blank'>Dallin H. Oaks, "The Challenge to Become"</a>` },
-                { title: "Mortal Life", description: "Earth life is a time of testing and experience. We learn to choose good from evil, develop divine attributes, and prepare to return to God.", christsRole: "Through His teachings, example, and Atoning sacrifice, Christ shows us how to live. His Atonement allows for repentance and gives us strength in trials.", position: 30, icon: `<svg class="stage-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2h8a2 2 0 002-2v-1a2 2 0 012-2h1.945M7.75 4a9 9 0 0110.5 0m-10.5 0a9 9 0 0010.5 0M7.75 4c-2.094 2.026-3.75 4.73-3.75 7.5a9.04 9.04 0 003.75 7.5m10.5-15c2.094 2.026 3.75 4.73 3.75 7.5a9.04 9.04 0 01-3.75 7.5"></path></svg>`, study: `<a class='study-link' href='https://www.churchofjesuschrist.org/study/scriptures/bofm/2-ne/2.27' target='_blank'>2 Nephi 2:27</a>, <a class='study-link' href='https://www.churchofjesuschrist.org/study/scriptures/bofm/alma/34.32' target='_blank'>Alma 34:32</a>` },
-                { title: "Death & Spirit World", description: "At death, our spirit separates from our body and goes to the Spirit World. The gospel is preached to all there, giving everyone a chance to accept it.", christsRole: "Christ's death and resurrection opened the doors of the Spirit World. He organized the work of salvation there, ensuring all can hear His message.", position: 40, icon: `<svg class="stage-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zM12 6v6l4 2"></path><path d="M12 12H8" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path></svg>`, study: `<a class='study-link' href='https://www.churchofjesuschrist.org/study/scriptures/bofm/alma/40.11-14' target='_blank'>Alma 40:11-14</a>, <a class='study-link' href='https://www.churchofjesuschrist.org/study/scriptures/nt/1-pet/4.6' target='_blank'>1 Peter 4:6</a>` },
-                { title: "Resurrection", description: "Resurrection is the reuniting of our spirit and body, now perfected and immortal. This is a free gift to every person who has ever lived.", christsRole: "Christ was the first to be resurrected, breaking the bands of death for all mankind. His victory over death makes our own resurrection possible.", position: 50, icon: `<svg class="stage-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>`, study: `<a class='study-link' href='https://www.churchofjesuschrist.org/study/scriptures/bofm/2-ne/9.6-9' target='_blank'>2 Nephi 9:6-9</a>, <a class='study-link' href='https://www.churchofjesuschrist.org/study/scriptures/nt/1-cor/15.20-22' target='_blank'>1 Corinthians 15:20-22</a>` },
-                { title: "Final Judgment", description: "After resurrection, we will stand before God to be judged according to our works and the desires of our hearts. This judgment will be perfectly fair and merciful.", christsRole: "Jesus Christ is our Judge and Advocate. Because He understands us perfectly, He judges with mercy, balancing justice with His infinite love.", position: 60, icon: `<svg class="stage-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"></path></svg>`, study: `<a class='study-link' href='https://www.churchofjesuschrist.org/study/scriptures/nt/rev/20.12' target='_blank'>Revelation 20:12</a>, <a class='study-link' href='https://www.churchofjesuschrist.org/study/scriptures/bofm/3-ne/27.23-26' target='_blank'>3 Nephi 27:23-26</a>` },
-                { title: "The Three Degrees of Glory", description: "After judgment, we inherit a place in a kingdom of glory. These kingdoms—Celestial, Terrestrial, and Telestial—differ in glory, like the sun, moon, and stars.", christsRole: "It is through Christ's Atonement that any kingdom of glory is attainable. He is the gatekeeper, and by His grace we are saved after all we can do.", position: 75, isGlory: true, study: `<a class='study-link' href='https://www.churchofjesuschrist.org/study/scriptures/dc-testament/dc/76' target='_blank'>Doctrine & Covenants 76</a>` },
-                { title: "Outer Darkness", description: "This is not a kingdom of glory, but a state of eternal misery. It is reserved for the very few who gain a perfect knowledge and then willfully deny the Holy Ghost and defy God.", christsRole: "Christ's Atonement cannot save those who, with full knowledge, choose to permanently reject it. Their choice places them outside the bounds of His mercy.", position: 90, isOuterDarkness: true, study: `<a class='study-link' href='https://www.churchofjesuschrist.org/study/scriptures/dc-testament/dc/76.25-49' target='_blank'>Doctrine & Covenants 76:25-49</a>` }
-            ];
+            const gameData = {
+                stages: [
+                    { id: 'pre-earth', name: 'Pre-earth Life', shape: 'circle', correctItem: 'clouds' },
+                    { id: 'birth', name: 'Birth', shape: 'arrow-right', correctItem: 'arrow-down' },
+                    { id: 'earth-life', name: 'Earth Life', shape: 'circle', correctItem: 'earth' },
+                    { id: 'death', name: 'Death', shape: 'arrow-right', correctItem: 'arrow-point-right' },
+                    { id: 'spirit-world', name: 'Spirit World', shape: 'circle', correctItem: 'spirit' },
+                    { id: 'judgment', name: 'Resurrection & Final Judgment', shape: 'bracket', correctItem: null },
+                    { id: 'celestial', name: 'Celestial Kingdom', shape: 'circle', correctItem: 'sun' },
+                    { id: 'terrestrial', name: 'Terrestrial Kingdom', shape: 'circle', correctItem: 'moon' },
+                    { id: 'telestial', name: 'Telestial Kingdom', shape: 'circle', correctItem: 'star' }
+                ],
+                items: [
+                    { id: 'sun', name: 'Sun', svg: `<svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" viewBox="0 0 24 24" fill="yellow"><circle cx="12" cy="12" r="10"/></svg>` },
+                    { id: 'moon', name: 'Moon', svg: `<svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" viewBox="0 0 24 24" fill="lightgray"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c.34 0 .68-.02 1.01-.05C10.13 21.16 8 16.92 8 12s2.13-9.16 5.01-9.95C12.68 2.02 12.34 2 12 2z"/></svg>` },
+                    { id: 'star', name: 'Star', svg: `<svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" viewBox="0 0 24 24" fill="blue"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>` },
+                    { id: 'earth', name: 'Earth', svg: `<svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" viewBox="0 0 24 24" fill="green"><circle cx="12" cy="12" r="10"/></svg>` },
+                    { id: 'clouds', name: 'Clouds', svg: `<svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" viewBox="0 0 24 24" fill="skyblue"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/></svg>` },
+                    { id: 'spirit', name: 'Spirit World', svg: `<svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" viewBox="0 0 24 24" fill="none" stroke="indigo" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="2" x2="12" y2="22"/></svg>` },
+                    { id: 'arrow-down', name: 'Birth Arrow', svg: `<svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" viewBox="0 0 24 24"><rect width="24" height="24" fill="gray"/><path d="M12 20l-8-8h5V4h6v8h5l-8 8z" fill="white"/></svg>` },
+                    { id: 'arrow-point-right', name: 'Death Arrow', svg: `<svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" viewBox="0 0 24 24"><rect width="24" height="24" fill="gray"/><path d="M4 12l8-8v5h8v6h-8v5l-8-8z" fill="white"/></svg>` }
+                ]
+            };
 
-            let currentStage = 0;
-            const infoContainer = document.getElementById('info-container');
-            const pathContainer = document.getElementById('path-container');
-            const personIcon = document.getElementById('person-icon');
-            const prevBtn = document.getElementById('prev-btn');
-            const nextBtn = document.getElementById('next-btn');
-            const stepCounter = document.getElementById('step-counter');
+            const diagramContainer = document.getElementById('diagram-container');
+            const draggablesContainer = document.getElementById('draggable-items-container');
+            const winModal = document.getElementById('win-modal');
 
-            function initialize() {
-                drawTimeline();
-                stages.forEach(stage => {
-                    infoContainer.appendChild(createCard(stage));
+            let correctPlacements = 0;
+            const totalItemsToPlace = gameData.items.length;
+
+            function setupGame() {
+                // Reset state
+                correctPlacements = 0;
+                diagramContainer.innerHTML = '';
+                draggablesContainer.innerHTML = '';
+                winModal.classList.add('opacity-0', 'pointer-events-none', 'scale-95');
+
+                // Create drop zones
+                let kingdomGroup = [];
+                gameData.stages.forEach((stage, index) => {
+                    if (stage.id.includes('kingdom')) {
+                        kingdomGroup.push(stage);
+                        if (index === gameData.stages.length - 1) {
+                             createKingdomColumn(kingdomGroup);
+                        }
+                    } else if (stage.id === 'judgment') {
+                        createStageElement(stage);
+                        createKingdomColumn(kingdomGroup);
+                        kingdomGroup = [];
+                    } else {
+                        createStageElement(stage);
+                        if(stage.shape === 'arrow-right') {
+                            addArrowConnector();
+                        }
+                    }
                 });
-                setupEventListeners();
-                updateUI();
-            }
 
-            function drawTimeline() {
-                pathContainer.innerHTML = ''; // Clear previous timeline
-                const pathPositions = [];
+                // Create and shuffle draggable items
+                const shuffledItems = [...gameData.items].sort(() => Math.random() - 0.5);
+                shuffledItems.forEach(createDraggableItem);
                 
-                stages.forEach((stage, index) => {
-                    const isDown = index % 2 === 0;
-                    const posClass = isDown ? 'pos-down' : 'pos-up';
-                    const yPos = isDown ? 120 : 60;
-
-                    const point = document.createElement('div');
-                    point.className = `stage-point ${posClass}`;
-                    point.style.left = `${stage.position}%`;
-                    point.dataset.index = index;
-                    pathContainer.appendChild(point);
-                    pathPositions.push({ x: stage.position, y: yPos });
-
-                    const label = document.createElement('div');
-                    label.className = `stage-label ${posClass}`;
-                    label.style.left = `${stage.position}%`;
-                    label.textContent = stage.title;
-                    label.dataset.index = index;
-                    pathContainer.appendChild(label);
-                });
-
-                for (let i = 0; i < pathPositions.length - 1; i++) {
-                    const start = pathPositions[i];
-                    const end = pathPositions[i+1];
-                    const deltaX = (end.x - start.x) * pathContainer.offsetWidth / 100;
-                    const deltaY = end.y - start.y;
-                    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-                    const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
-
-                    const segment = document.createElement('div');
-                    segment.className = 'path-segment';
-                    segment.style.height = '2px';
-                    segment.style.left = `${start.x}%`;
-                    segment.style.top = `${start.y}px`;
-                    segment.style.width = `${distance}px`;
-                    segment.style.transformOrigin = 'left center';
-                    segment.style.transform = `rotate(${angle}deg)`;
-                    pathContainer.appendChild(segment);
-                }
-                 pathContainer.appendChild(personIcon); // Ensure person icon is re-added
+                addDragListeners();
             }
-            
-            function createCard(stage) {
-                const card = document.createElement('div');
-                card.className = 'stage-card';
-                const studyHTML = `<div class="mt-4 pt-4 border-t border-slate-200 text-center">
-                                     <h4 class="font-semibold text-slate-700 mb-2">Further Study</h4>
-                                     <p class="text-sm text-slate-600">${stage.study}</p>
-                                   </div>`;
 
-                let contentHTML = '';
-                if (stage.isGlory) {
-                    contentHTML = `<div class="p-2 sm:p-4 bg-slate-50 rounded-lg border border-slate-200">
-                                       <h2 class="text-xl sm:text-2xl font-bold text-slate-800 title-font mb-4 text-center">${stage.title}</h2>
-                                       <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center mb-6">
-                                           <div class="flex flex-col items-center p-2"><div class="w-24 h-24 degree-circle celestial mb-3"></div><h3 class="font-bold text-base sm:text-lg text-slate-700">Celestial</h3><p class="text-xs text-slate-500">Glory of the Sun. Live with God. For those who accept and live the full gospel.</p></div>
-                                           <div class="flex flex-col items-center p-2"><div class="w-24 h-24 degree-circle terrestrial mb-3"></div><h3 class="font-bold text-base sm:text-lg text-slate-700">Terrestrial</h3><p class="text-xs text-slate-500">Glory of the Moon. For good, honorable people not valiant in the testimony of Jesus.</p></div>
-                                           <div class="flex flex-col items-center p-2"><div class="w-24 h-24 degree-circle telestial mb-3"></div><h3 class="font-bold text-base sm:text-lg text-slate-700">Telestial</h3><p class="text-xs text-slate-500">Glory of the Stars. For those who chose wickedness but ultimately accept Christ.</p></div>
-                                       </div>
-                                       <div class="mt-6 pt-6 border-t border-slate-200"><h3 class="font-bold text-lg text-slate-700 title-font text-center mb-3">Within the Celestial Kingdom</h3><p class="text-slate-600 text-sm sm:text-base mb-4 text-center max-w-2xl mx-auto">The highest degree of the Celestial Kingdom is where we can live with Heavenly Father and become like Him, a state called exaltation or eternal life. This requires making and keeping sacred covenants through priesthood ordinances, including celestial marriage.</p></div>
-                                       <p class="text-sky-700 bg-sky-100 p-3 rounded-md text-sm sm:text-base mt-4"><strong class="font-semibold">Christ's Role:</strong> ${stage.christsRole}</p>
-                                       ${studyHTML}
-                                   </div>`;
-                } else if (stage.isOuterDarkness) {
-                    contentHTML = `<div class="p-4 sm:p-6 bg-slate-800 text-slate-300 rounded-lg border border-slate-700 flex flex-col items-center text-center">
-                                       <div class="w-24 h-24 degree-circle outer-darkness-circle mb-4"></div>
-                                       <h2 class="text-xl sm:text-2xl font-bold text-white title-font mb-2">${stage.title}</h2>
-                                       <p class="mb-4 text-sm sm:text-base">${stage.description}</p>
-                                       <p class="text-slate-300 bg-slate-700 p-4 rounded-md w-full"><strong class="font-semibold text-white">Christ's Role:</strong> ${stage.christsRole}</p>
-                                       ${studyHTML}
-                                   </div>`;
+            function createStageElement(stage) {
+                const stageWrapper = document.createElement('div');
+                stageWrapper.className = 'flex flex-col items-center text-center mx-1';
+                
+                const stageName = document.createElement('p');
+                stageName.className = 'font-semibold text-sm md:text-base mb-1 h-10 flex items-end justify-center';
+                stageName.innerHTML = stage.name.replace('&', '&<br>');
+                
+                const dropZone = document.createElement('div');
+                dropZone.id = stage.id;
+                dropZone.dataset.correctItem = stage.correctItem;
+                dropZone.className = 'drop-zone bg-gray-200 border-2 border-dashed border-gray-400 rounded-lg flex items-center justify-center';
+
+                if (stage.shape === 'circle') {
+                    dropZone.classList.add('w-24', 'h-24', 'rounded-full');
+                } else if (stage.shape === 'arrow-right') {
+                    dropZone.classList.add('w-24', 'h-24');
+                } else if (stage.shape === 'bracket') {
+                    dropZone.className = 'w-12 h-48 md:h-64 border-gray-700 border-t-4 border-b-4 border-r-4 rounded-tr-2xl rounded-br-2xl';
+                    stageWrapper.classList.add('self-stretch', 'ml-2', 'mr-1');
+                }
+
+                stageWrapper.appendChild(stageName);
+                if(stage.shape !== 'bracket') {
+                    stageWrapper.appendChild(dropZone);
                 } else {
-                    contentHTML = `<div class="p-4 sm:p-6 bg-slate-50 rounded-lg border border-slate-200 flex flex-col items-center text-center">
-                                       ${stage.icon}
-                                       <h2 class="text-xl sm:text-2xl font-bold text-slate-800 title-font mb-2">${stage.title}</h2>
-                                       <p class="text-slate-600 mb-4 text-sm sm:text-base">${stage.description}</p>
-                                       <p class="text-sky-700 bg-sky-100 p-4 rounded-md w-full"><strong class="font-semibold">Christ's Role:</strong> ${stage.christsRole}</p>
-                                       ${studyHTML}
-                                   </div>`;
-                }
-                card.innerHTML = contentHTML;
-                return card;
-            }
-
-            function setupEventListeners() {
-                // Button navigation
-                prevBtn.addEventListener('click', () => navigate(-1));
-                nextBtn.addEventListener('click', () => navigate(1));
-
-                // Clickable timeline navigation
-                pathContainer.addEventListener('click', (e) => {
-                    const target = e.target.closest('.stage-point, .stage-label');
-                    if (target && target.dataset.index) {
-                        const index = parseInt(target.dataset.index, 10);
-                        if (index !== currentStage) {
-                            currentStage = index;
-                            updateUI();
-                        }
-                    }
-                });
-
-                // Swipe navigation
-                let touchStartX = 0;
-                let touchEndX = 0;
-                const swipeThreshold = 50; // Minimum distance for a swipe
-
-                infoContainer.addEventListener('touchstart', (e) => {
-                    touchStartX = e.changedTouches[0].screenX;
-                }, { passive: true });
-
-                infoContainer.addEventListener('touchend', (e) => {
-                    touchEndX = e.changedTouches[0].screenX;
-                    handleSwipe();
-                });
-
-                function handleSwipe() {
-                    const deltaX = touchEndX - touchStartX;
-                    if (Math.abs(deltaX) > swipeThreshold) {
-                        if (deltaX < 0) { // Swipe left
-                            navigate(1);
-                        } else { // Swipe right
-                            navigate(-1);
-                        }
-                    }
+                     stageWrapper.appendChild(dropZone);
                 }
                 
-                // Redraw timeline on resize
-                window.addEventListener('resize', drawTimeline);
+                diagramContainer.appendChild(stageWrapper);
+            }
+
+            function addArrowConnector() {
+                const arrow = document.createElement('div');
+                arrow.className = 'hidden md:block w-8 h-1 bg-gray-400 self-center';
+                diagramContainer.appendChild(arrow);
+            }
+
+            function createKingdomColumn(kingdoms) {
+                const columnWrapper = document.createElement('div');
+                columnWrapper.className = 'flex flex-col gap-2 items-center';
+
+                kingdoms.forEach(stage => {
+                    const stageWrapper = document.createElement('div');
+                    stageWrapper.className = 'flex flex-col items-center text-center';
+                    
+                    const stageName = document.createElement('p');
+                    stageName.className = 'font-semibold text-sm md:text-base mb-1';
+                    stageName.textContent = stage.name;
+                    
+                    const dropZone = document.createElement('div');
+                    dropZone.id = stage.id;
+                    dropZone.dataset.correctItem = stage.correctItem;
+                    dropZone.className = 'drop-zone bg-gray-200 border-2 border-dashed border-gray-400 rounded-full w-24 h-24 flex items-center justify-center';
+                    
+                    stageWrapper.appendChild(stageName);
+                    stageWrapper.appendChild(dropZone);
+                    columnWrapper.appendChild(stageWrapper);
+                });
+                diagramContainer.appendChild(columnWrapper);
+            }
+
+            function createDraggableItem(item) {
+                const itemEl = document.createElement('div');
+                itemEl.id = item.id;
+                itemEl.className = 'draggable-item p-2';
+                itemEl.draggable = true;
+                itemEl.innerHTML = item.svg;
+                draggablesContainer.appendChild(itemEl);
+            }
+
+            function addDragListeners() {
+                const draggables = document.querySelectorAll('.draggable-item');
+                const dropZones = document.querySelectorAll('.drop-zone');
+
+                draggables.forEach(draggable => {
+                    draggable.addEventListener('dragstart', handleDragStart);
+                    draggable.addEventListener('dragend', handleDragEnd);
+                });
+
+                dropZones.forEach(zone => {
+                    zone.addEventListener('dragover', handleDragOver);
+                    zone.addEventListener('dragleave', handleDragLeave);
+                    zone.addEventListener('drop', handleDrop);
+                });
+            }
+
+            function handleDragStart(e) {
+                if (e.target.classList.contains('item-placed')) return;
+                e.dataTransfer.setData('text/plain', e.target.id);
+                setTimeout(() => e.target.classList.add('dragging'), 0);
+            }
+
+            function handleDragEnd(e) {
+                e.target.classList.remove('dragging');
+            }
+
+            function handleDragOver(e) {
+                e.preventDefault();
+                if (!e.currentTarget.hasChildNodes()) {
+                    e.currentTarget.classList.add('drag-over');
+                }
+            }
+
+            function handleDragLeave(e) {
+                e.currentTarget.classList.remove('drag-over');
+            }
+
+            function handleDrop(e) {
+                e.preventDefault();
+                e.currentTarget.classList.remove('drag-over');
+
+                const dropZone = e.currentTarget;
+                if (dropZone.hasChildNodes()) return;
+
+                const id = e.dataTransfer.getData('text/plain');
+                const draggableElement = document.getElementById(id);
+
+                if (dropZone.dataset.correctItem === id) {
+                    // Correct drop
+                    dropZone.innerHTML = ''; // Clear just in case
+                    dropZone.appendChild(draggableElement);
+                    draggableElement.classList.add('item-placed');
+                    draggableElement.classList.remove('dragging');
+                    draggableElement.draggable = false;
+                    dropZone.classList.add('correct-drop');
+                    dropZone.classList.remove('border-dashed');
+                    correctPlacements++;
+                    checkWinCondition();
+                } else {
+                    // Incorrect drop
+                    dropZone.classList.add('shake');
+                    setTimeout(() => dropZone.classList.remove('shake'), 500);
+                }
             }
             
-            function navigate(direction) {
-                const newStage = currentStage + direction;
-                if (newStage >= 0 && newStage < stages.length) {
-                    currentStage = newStage;
-                    updateUI();
+            function checkWinCondition() {
+                if (correctPlacements === totalItemsToPlace) {
+                    setTimeout(() => {
+                        winModal.classList.remove('opacity-0', 'pointer-events-none', 'scale-95');
+                    }, 500);
                 }
             }
 
-            function updateUI() {
-                const stage = stages[currentStage];
-                const personShouldMove = !stage.isOuterDarkness;
+            document.getElementById('reset-button').addEventListener('click', setupGame);
+            document.getElementById('play-again-button').addEventListener('click', setupGame);
 
-                if (personShouldMove) {
-                    const isDown = currentStage % 2 === 0;
-                    personIcon.className = 'pos-down'; // reset
-                    personIcon.classList.add(isDown ? 'pos-down' : 'pos-up');
-                    personIcon.style.left = `${stage.position}%`;
-                }
-                
-                document.querySelectorAll('.stage-point').forEach((point, index) => {
-                    point.classList.toggle('active', index === currentStage);
-                });
-
-                document.querySelectorAll('.stage-card').forEach((card, index) => {
-                    card.classList.toggle('active', index === currentStage);
-                });
-
-                prevBtn.disabled = currentStage === 0;
-                nextBtn.disabled = currentStage === stages.length - 1;
-                
-                stepCounter.textContent = `Step ${currentStage + 1} of ${stages.length}`;
-            }
-
-            initialize();
+            // Initial setup
+            setupGame();
         });
     </script>
 </body>

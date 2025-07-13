@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plan of Salvation Matching Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            touch-action: none; /* Prevents scrolling on touch devices when dragging */
+        }
+        .drop-zone {
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+        .drop-zone.drag-over {
+            background-color: #cceeff;
+            transform: scale(1.05);
+            border: 2px dashed #007bff;
+        }
+        .draggable-item {
+            cursor: grab;
+            transition: transform 0.2s ease, opacity 0.2s ease;
+        }
+        .draggable-item.dragging {
+            opacity: 0.5;
+            transform: scale(0.9);
+            cursor: grabbing;
+        }
+        .item-placed {
+            cursor: default;
+            opacity: 1 !important;
+        }
+        .shake {
+            animation: shake 0.5s;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+        }
+        .correct-drop {
+            background-color: #d4edda !important;
+            border-color: #28a745 !important;
+        }
+        #win-modal {
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 flex flex-col items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-7xl mx-auto">
+        <h1 class="text-3xl md:text-4xl font-bold text-center text-gray-700 mb-2">Heavenly Father's Plan of Salvation</h1>
+        <p class="text-center text-gray-500 mb-6">Drag the icons to their correct places in the diagram.</p>
+
+        <!-- Main Diagram Flow -->
+        <div id="diagram-container" class="flex flex-wrap justify-center items-center gap-2 md:gap-0 mb-8">
+            <!-- Stages will be dynamically inserted here by JS -->
+        </div>
+
+        <!-- Draggable Items Area -->
+        <div class="bg-white p-4 rounded-xl shadow-lg w-full max-w-4xl mx-auto">
+            <h2 class="text-xl font-bold text-center mb-4">Stickers</h2>
+            <div id="draggable-items-container" class="flex flex-wrap justify-center items-center gap-4">
+                <!-- Draggable items will be dynamically inserted here by JS -->
+            </div>
+        </div>
+        
+        <div class="text-center mt-8">
+            <button id="reset-button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105">
+                Reset Game
+            </button>
+        </div>
+    </div>
+
+    <!-- Win Modal -->
+    <div id="win-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transform scale-95">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 text-center max-w-sm w-full transform transition-all">
+            <h2 class="text-3xl font-bold text-green-500 mb-4">Congratulations!</h2>
+            <p class="text-gray-600 mb-6">You've completed the Plan of Salvation diagram!</p>
+            <button id="play-again-button" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-lg shadow-md transition-transform transform hover:scale-105 w-full">
+                Play Again
+            </button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const gameData = {
+                stages: [
+                    { id: 'pre-earth', name: 'Pre-earth Life', shape: 'circle', correctItem: 'clouds' },
+                    { id: 'birth', name: 'Birth', shape: 'arrow-right', correctItem: 'arrow-down' },
+                    { id: 'earth-life', name: 'Earth Life', shape: 'circle', correctItem: 'earth' },
+                    { id: 'death', name: 'Death', shape: 'arrow-right', correctItem: 'arrow-point-right' },
+                    { id: 'spirit-world', name: 'Spirit World', shape: 'circle', correctItem: 'spirit' },
+                    { id: 'judgment', name: 'Resurrection & Final Judgment', shape: 'bracket', correctItem: null },
+                    { id: 'celestial', name: 'Celestial Kingdom', shape: 'circle', correctItem: 'sun' },
+                    { id: 'terrestrial', name: 'Terrestrial Kingdom', shape: 'circle', correctItem: 'moon' },
+                    { id: 'telestial', name: 'Telestial Kingdom', shape: 'circle', correctItem: 'star' }
+                ],
+                items: [
+                    { id: 'sun', name: 'Sun', svg: `<svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" viewBox="0 0 24 24" fill="yellow"><circle cx="12" cy="12" r="10"/></svg>` },
+                    { id: 'moon', name: 'Moon', svg: `<svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" viewBox="0 0 24 24" fill="lightgray"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c.34 0 .68-.02 1.01-.05C10.13 21.16 8 16.92 8 12s2.13-9.16 5.01-9.95C12.68 2.02 12.34 2 12 2z"/></svg>` },
+                    { id: 'star', name: 'Star', svg: `<svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" viewBox="0 0 24 24" fill="blue"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>` },
+                    { id: 'earth', name: 'Earth', svg: `<svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" viewBox="0 0 24 24" fill="green"><circle cx="12" cy="12" r="10"/></svg>` },
+                    { id: 'clouds', name: 'Clouds', svg: `<svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" viewBox="0 0 24 24" fill="skyblue"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/></svg>` },
+                    { id: 'spirit', name: 'Spirit World', svg: `<svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" viewBox="0 0 24 24" fill="none" stroke="indigo" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="2" x2="12" y2="22"/></svg>` },
+                    { id: 'arrow-down', name: 'Birth Arrow', svg: `<svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" viewBox="0 0 24 24"><rect width="24" height="24" fill="gray"/><path d="M12 20l-8-8h5V4h6v8h5l-8 8z" fill="white"/></svg>` },
+                    { id: 'arrow-point-right', name: 'Death Arrow', svg: `<svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" viewBox="0 0 24 24"><rect width="24" height="24" fill="gray"/><path d="M4 12l8-8v5h8v6h-8v5l-8-8z" fill="white"/></svg>` }
+                ]
+            };
+
+            const diagramContainer = document.getElementById('diagram-container');
+            const draggablesContainer = document.getElementById('draggable-items-container');
+            const winModal = document.getElementById('win-modal');
+
+            let correctPlacements = 0;
+            const totalItemsToPlace = gameData.items.length;
+
+            function setupGame() {
+                // Reset state
+                correctPlacements = 0;
+                diagramContainer.innerHTML = '';
+                draggablesContainer.innerHTML = '';
+                winModal.classList.add('opacity-0', 'pointer-events-none', 'scale-95');
+
+                // Create drop zones
+                let kingdomGroup = [];
+                gameData.stages.forEach((stage, index) => {
+                    if (stage.id.includes('kingdom')) {
+                        kingdomGroup.push(stage);
+                        if (index === gameData.stages.length - 1) {
+                             createKingdomColumn(kingdomGroup);
+                        }
+                    } else if (stage.id === 'judgment') {
+                        createStageElement(stage);
+                        createKingdomColumn(kingdomGroup);
+                        kingdomGroup = [];
+                    } else {
+                        createStageElement(stage);
+                        if(stage.shape === 'arrow-right') {
+                            addArrowConnector();
+                        }
+                    }
+                });
+
+                // Create and shuffle draggable items
+                const shuffledItems = [...gameData.items].sort(() => Math.random() - 0.5);
+                shuffledItems.forEach(createDraggableItem);
+                
+                addDragListeners();
+            }
+
+            function createStageElement(stage) {
+                const stageWrapper = document.createElement('div');
+                stageWrapper.className = 'flex flex-col items-center text-center mx-1';
+                
+                const stageName = document.createElement('p');
+                stageName.className = 'font-semibold text-sm md:text-base mb-1 h-10 flex items-end justify-center';
+                stageName.innerHTML = stage.name.replace('&', '&<br>');
+                
+                const dropZone = document.createElement('div');
+                dropZone.id = stage.id;
+                dropZone.dataset.correctItem = stage.correctItem;
+                dropZone.className = 'drop-zone bg-gray-200 border-2 border-dashed border-gray-400 rounded-lg flex items-center justify-center';
+
+                if (stage.shape === 'circle') {
+                    dropZone.classList.add('w-24', 'h-24', 'rounded-full');
+                } else if (stage.shape === 'arrow-right') {
+                    dropZone.classList.add('w-24', 'h-24');
+                } else if (stage.shape === 'bracket') {
+                    dropZone.className = 'w-12 h-48 md:h-64 border-gray-700 border-t-4 border-b-4 border-r-4 rounded-tr-2xl rounded-br-2xl';
+                    stageWrapper.classList.add('self-stretch', 'ml-2', 'mr-1');
+                }
+
+                stageWrapper.appendChild(stageName);
+                if(stage.shape !== 'bracket') {
+                    stageWrapper.appendChild(dropZone);
+                } else {
+                     stageWrapper.appendChild(dropZone);
+                }
+                
+                diagramContainer.appendChild(stageWrapper);
+            }
+
+            function addArrowConnector() {
+                const arrow = document.createElement('div');
+                arrow.className = 'hidden md:block w-8 h-1 bg-gray-400 self-center';
+                diagramContainer.appendChild(arrow);
+            }
+
+            function createKingdomColumn(kingdoms) {
+                const columnWrapper = document.createElement('div');
+                columnWrapper.className = 'flex flex-col gap-2 items-center';
+
+                kingdoms.forEach(stage => {
+                    const stageWrapper = document.createElement('div');
+                    stageWrapper.className = 'flex flex-col items-center text-center';
+                    
+                    const stageName = document.createElement('p');
+                    stageName.className = 'font-semibold text-sm md:text-base mb-1';
+                    stageName.textContent = stage.name;
+                    
+                    const dropZone = document.createElement('div');
+                    dropZone.id = stage.id;
+                    dropZone.dataset.correctItem = stage.correctItem;
+                    dropZone.className = 'drop-zone bg-gray-200 border-2 border-dashed border-gray-400 rounded-full w-24 h-24 flex items-center justify-center';
+                    
+                    stageWrapper.appendChild(stageName);
+                    stageWrapper.appendChild(dropZone);
+                    columnWrapper.appendChild(stageWrapper);
+                });
+                diagramContainer.appendChild(columnWrapper);
+            }
+
+            function createDraggableItem(item) {
+                const itemEl = document.createElement('div');
+                itemEl.id = item.id;
+                itemEl.className = 'draggable-item p-2';
+                itemEl.draggable = true;
+                itemEl.innerHTML = item.svg;
+                draggablesContainer.appendChild(itemEl);
+            }
+
+            function addDragListeners() {
+                const draggables = document.querySelectorAll('.draggable-item');
+                const dropZones = document.querySelectorAll('.drop-zone');
+
+                draggables.forEach(draggable => {
+                    draggable.addEventListener('dragstart', handleDragStart);
+                    draggable.addEventListener('dragend', handleDragEnd);
+                });
+
+                dropZones.forEach(zone => {
+                    zone.addEventListener('dragover', handleDragOver);
+                    zone.addEventListener('dragleave', handleDragLeave);
+                    zone.addEventListener('drop', handleDrop);
+                });
+            }
+
+            function handleDragStart(e) {
+                if (e.target.classList.contains('item-placed')) return;
+                e.dataTransfer.setData('text/plain', e.target.id);
+                setTimeout(() => e.target.classList.add('dragging'), 0);
+            }
+
+            function handleDragEnd(e) {
+                e.target.classList.remove('dragging');
+            }
+
+            function handleDragOver(e) {
+                e.preventDefault();
+                if (!e.currentTarget.hasChildNodes()) {
+                    e.currentTarget.classList.add('drag-over');
+                }
+            }
+
+            function handleDragLeave(e) {
+                e.currentTarget.classList.remove('drag-over');
+            }
+
+            function handleDrop(e) {
+                e.preventDefault();
+                e.currentTarget.classList.remove('drag-over');
+
+                const dropZone = e.currentTarget;
+                if (dropZone.hasChildNodes()) return;
+
+                const id = e.dataTransfer.getData('text/plain');
+                const draggableElement = document.getElementById(id);
+
+                if (dropZone.dataset.correctItem === id) {
+                    // Correct drop
+                    dropZone.innerHTML = ''; // Clear just in case
+                    dropZone.appendChild(draggableElement);
+                    draggableElement.classList.add('item-placed');
+                    draggableElement.classList.remove('dragging');
+                    draggableElement.draggable = false;
+                    dropZone.classList.add('correct-drop');
+                    dropZone.classList.remove('border-dashed');
+                    correctPlacements++;
+                    checkWinCondition();
+                } else {
+                    // Incorrect drop
+                    dropZone.classList.add('shake');
+                    setTimeout(() => dropZone.classList.remove('shake'), 500);
+                }
+            }
+            
+            function checkWinCondition() {
+                if (correctPlacements === totalItemsToPlace) {
+                    setTimeout(() => {
+                        winModal.classList.remove('opacity-0', 'pointer-events-none', 'scale-95');
+                    }, 500);
+                }
+            }
+
+            document.getElementById('reset-button').addEventListener('click', setupGame);
+            document.getElementById('play-again-button').addEventListener('click', setupGame);
+
+            // Initial setup
+            setupGame();
+        });
+    </script>
+</body>
+</html>

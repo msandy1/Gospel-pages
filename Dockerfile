@@ -1,8 +1,8 @@
 # Use a lightweight Nginx image
 FROM nginx:alpine
 
-# Copy the static HTML file to the Nginx server's public directory
-COPY index.html /usr/share/nginx/html/index.html
+# Copy all static assets to the Nginx server's public directory
+COPY . /usr/share/nginx/html
 
 # Expose port 80 to the outside world
 EXPOSE 80

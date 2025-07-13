@@ -6,18 +6,6 @@
     <title>The Plan of Salvation</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:wght@400;600;700&family=Lora:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="manifest" href="manifest.json">
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/service-worker.js').then(registration => {
-                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
-                }, err => {
-                    console.log('ServiceWorker registration failed: ', err);
-                });
-            });
-        }
-    </script>
     <style>
         body {
             font-family: 'Lora', serif;
@@ -97,33 +85,6 @@
         
         .study-link {
             @apply text-sky-600 hover:text-sky-800 hover:underline transition-colors;
-        }
-        /* --- Degrees of Glory Styles --- */
-        .degree-circle {
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-            text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
-            flex-shrink: 0;
-        }
-        .celestial {
-            background: radial-gradient(ellipse at center, #ffffff 0%, #f0f9ff 40%, #bae6fd 100%);
-            box-shadow: 0 0 50px 15px #fff, 0 0 80px 30px #7dd3fc, 0 0 120px 50px #0ea5e9;
-        }
-        .terrestrial {
-            background: radial-gradient(ellipse at center, #f0f9ff 0%, #e0f2fe 40%, #7dd3fc 100%);
-            box-shadow: 0 0 35px 12px #e0f2fe, 0 0 60px 25px #38bdf8;
-        }
-        .telestial {
-            background: radial-gradient(ellipse at center, #e0f2fe 0%, #cffafe 40%, #22d3ee 100%);
-            box-shadow: 0 0 20px 8px #cffafe, 0 0 35px 15px #67e8f9;
-        }
-        .outer-darkness-circle {
-            background: #1e293b;
-            box-shadow: 0 0 15px 5px #475569;
         }
     </style>
 </head>

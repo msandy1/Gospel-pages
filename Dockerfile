@@ -2,7 +2,7 @@
 FROM nginx:alpine
 
 # Copy all static assets to the Nginx server's public directory
-COPY . /usr/share/nginx/html
+COPY ./project/ /usr/share/nginx/html
 
 # Copy the custom Nginx configuration
 COPY nginx.conf /etc/nginx/nginx.conf
